@@ -13,6 +13,9 @@ import Watchlist from "./pages/Watchlist";
 import SettingsPage from "./pages/SettingsPage";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
+import Disclaimer from "./pages/Disclaimer";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import TermsOfService from "./pages/TermsOfService";
 
 const queryClient = new QueryClient();
 
@@ -33,6 +36,9 @@ const App = () => (
             <Route path="/ai-insights" element={<AiInsights />} />
             <Route path="/watchlist" element={<Watchlist />} />
             <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/disclaimer" element={<Disclaimer />} />
+            <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+            <Route path="/terms-of-service" element={<TermsOfService />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>

@@ -1,15 +1,24 @@
-import { Search, Bell } from "lucide-react";
+import { Search, Bell, AlertCircle } from "lucide-react";
 
 const Header = () => {
   return (
     <header className="fixed top-0 right-0 left-0 lg:left-60 h-16 bg-[hsla(var(--header-bg))] backdrop-blur-xl border-b border-[hsla(var(--glass-border))] z-40 flex items-center justify-between px-4 md:px-6">
-      {/* Left: Mobile logo */}
+      {/* Left: Mobile logo + Badge */}
       <div className="lg:hidden flex items-center gap-2">
         <span className="text-lg font-bold text-foreground">
           Market<span className="text-primary">Pulse</span>
         </span>
+        <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-yellow-500/10 border border-yellow-500/30">
+          <AlertCircle className="h-3 w-3 text-yellow-500" />
+          <span className="text-xs font-semibold text-yellow-500">Learning</span>
+        </div>
       </div>
-      <div className="hidden lg:block" />
+      <div className="hidden lg:flex items-center gap-2">
+        <div className="flex items-center gap-1 px-3 py-1 rounded-full bg-yellow-500/10 border border-yellow-500/30">
+          <AlertCircle className="h-3.5 w-3.5 text-yellow-500" />
+          <span className="text-sm font-semibold text-yellow-500">⚠️ Educational Project</span>
+        </div>
+      </div>
 
       {/* Center: Search */}
       <div className="hidden sm:flex items-center flex-1 max-w-md mx-4">

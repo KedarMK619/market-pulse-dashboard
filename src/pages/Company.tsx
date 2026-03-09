@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Search, Bookmark, TrendingUp, TrendingDown, Brain,
-  ArrowRight, Loader2, BarChart3, Activity, Zap, AlertTriangle, Shield
+  ArrowRight, Loader2, BarChart3, Activity, Zap, AlertTriangle, Shield, AlertCircle
 } from "lucide-react";
 import {
   LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer,
@@ -14,6 +14,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useStockData } from "@/hooks/useStockData";
+import { useCompanyNews } from "@/hooks/useNewsData";
+import { useCompanyFinancials } from "@/hooks/useFinancialData";
 
 // ── helpers ──
 const sectorColors: Record<string, string> = {
@@ -40,6 +44,11 @@ const Company = () => {
   const [aiResponse, setAiResponse] = useState<string | null>(null);
   const [timeRange, setTimeRange] = useState<"1D" | "1W" | "1M" | "1Y">("1M");
 
+  // Fetch real data from APIs
+  const stockData = useStockData(selected.symbol);
+  const newsData = useCompanyNews(selected.name.split(" ")[0]);
+  const financialData = useCompanyFinancials(selected.symbol);
+
   const filtered = useMemo(
     () =>
       query.trim()
@@ -52,22 +61,28 @@ const Company = () => {
     [query]
   );
 
-  const companyPL = plData[selected.symbol] ?? [];
-  const companyNews = newsItems.filter(
+  // Use real data if available, fallback to mock
+  const currentPrice = stockData.quote?.price ?? selected.currentPrice;
+  const change = stockData.quote?.change ?? selected.change;
+  const changePercent = stockData.quote?.changePercent ?? selected.changePercent;
+  const companyPL = financialData.incomeStatement.length > 0 ? financialData.incomeStatement : plData[selected.symbol] ?? [];
+  const companyNews = newsData.articles.length > 0 ? newsData.articles : newsItems.filter(
     (n) =>
       n.company.toLowerCase() === selected.name.split(" ")[0].toLowerCase() ||
       n.company === "Multiple"
   );
 
+  const chartData = stockData.history.length > 0 ? stockData.history : selected.chartData;
+
   const chartSlice = useMemo(() => {
-    const d = selected.chartData;
+    const d = chartData;
     if (timeRange === "1D") return d.slice(-2);
     if (timeRange === "1W") return d.slice(-7);
     if (timeRange === "1Y") return d;
     return d; // 1M
-  }, [selected, timeRange]);
+  }, [chartData, timeRange]);
 
-  const isUp = selected.changePercent >= 0;
+  const isUp = changePercent >= 0;
 
   // demand monthly data (generate simple from chartData length)
   const demandMonthly = useMemo(() => {
@@ -93,8 +108,9 @@ const Company = () => {
     setAiResponse(null);
     setTimeout(() => {
       setAiLoading(false);
+      const plData = companyPL[0];
       setAiResponse(
-        `Based on current market data, ${selected.name} shows ${isUp ? "strong" : "mixed"} fundamentals with ${isUp ? "consistent revenue growth" : "some revenue pressure"} over the last 4 quarters.\n\n• Revenue trend: ${isUp ? "Upward" : "Under pressure"} — latest quarter at $${companyPL[0]?.revenue ?? "N/A"}B\n• Profit margin: ${companyPL[0]?.profitMargin ?? "N/A"}% ${(companyPL[0]?.changeFromLastQuarter ?? 0) >= 0 ? "improving" : "declining"}\n• Demand score: ${selected.demandScore}/100 (${selected.demandChange >= 0 ? "+" : ""}${selected.demandChange}% change)\n• Market position: ${selected.status} with $${selected.marketCap} market cap\n\nWatch for margin pressure in Q4 due to increased competition and macro headwinds.`
+        `Based on current market data, ${selected.name} shows ${isUp ? "strong" : "mixed"} fundamentals with ${isUp ? "consistent revenue growth" : "some revenue pressure"} over the last 4 quarters.\n\n• Revenue trend: ${isUp ? "Upward" : "Under pressure"} — latest quarter at $${plData?.revenue ?? "N/A"}B\n• Profit margin: ${plData?.profitMargin.toFixed(2) ?? "N/A"}% ${(plData?.changeFromLastQuarter ?? 0) >= 0 ? "improving" : "declining"}\n• Demand score: ${selected.demandScore}/100 (${selected.demandChange >= 0 ? "+" : ""}${selected.demandChange}% change)\n• Market position: ${selected.status} with $${selected.marketCap} market cap\n\nWatch for margin pressure in Q4 due to increased competition and macro headwinds.`
       );
     }, 2000);
   };
@@ -179,17 +195,34 @@ const Company = () => {
             </div>
             <p className="text-xs text-muted-foreground">Founded {selected.foundedYear}</p>
 
+            {/* Error/Status Alert */}
+            {stockData.error && (
+              <Alert variant="default" className="bg-yellow-500/10 border-yellow-500/20">
+                <AlertCircle className="h-4 w-4 text-yellow-600" />
+                <AlertDescription className="text-yellow-700 text-xs ml-2">
+                  {stockData.error}
+                </AlertDescription>
+              </Alert>
+            )}
+
             {/* Stat boxes */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-2">
-              <StatBox label="Current Price" value={`$${selected.currentPrice.toLocaleString()}`}>
+              <StatBox label="Current Price" value={`$${currentPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}>
                 <span className={isUp ? "text-primary" : "text-destructive"}>
-                  {isUp ? "+" : ""}{selected.changePercent.toFixed(2)}%
+                  {isUp ? "+" : ""}{changePercent.toFixed(2)}%
                 </span>
               </StatBox>
               <StatBox label="Market Cap" value={selected.marketCap} />
               <StatBox label="52W High" value={`$${selected.high52week}`} className="text-primary" />
               <StatBox label="52W Low" value={`$${selected.low52week}`} className="text-destructive" />
             </div>
+
+            {/* Last updated info */}
+            {stockData.lastUpdated && (
+              <p className="text-xs text-muted-foreground">
+                Last updated: {new Date(stockData.lastUpdated).toLocaleTimeString()}
+              </p>
+            )}
 
             <Button variant="outline" size="sm" className="border-primary/40 text-primary hover:bg-primary/10 mt-2">
               <Bookmark className="h-4 w-4 mr-1" /> Add to Watchlist
@@ -224,72 +257,95 @@ const Company = () => {
                   variant={timeRange === r ? "default" : "outline"}
                   className={timeRange === r ? "bg-primary text-primary-foreground" : ""}
                   onClick={() => setTimeRange(r)}
+                  disabled={stockData.loading}
                 >
                   {r}
                 </Button>
               ))}
             </div>
             <div className="glass-card p-4">
-              <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={chartSlice}>
-                  <XAxis dataKey="date" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} tickLine={false} axisLine={false} />
-                  <YAxis tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} tickLine={false} axisLine={false} tickFormatter={(v: number) => `$${v}`} domain={["auto","auto"]} />
-                  <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsla(var(--glass-border))", borderRadius: 8, color: "#fff" }} formatter={(v: number) => [`$${v.toFixed(2)}`, "Price"]} />
-                  <Line type="monotone" dataKey="price" stroke={isUp ? "hsl(var(--primary))" : "hsl(var(--destructive))"} strokeWidth={2} dot={false} activeDot={{ r: 5 }} />
-                </LineChart>
-              </ResponsiveContainer>
+              {stockData.loading ? (
+                <div className="h-[300px] bg-muted animate-pulse rounded" />
+              ) : (
+                <ResponsiveContainer width="100%" height={300}>
+                  <LineChart data={chartSlice}>
+                    <XAxis dataKey="date" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} tickLine={false} axisLine={false} />
+                    <YAxis tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} tickLine={false} axisLine={false} tickFormatter={(v: number) => `$${v}`} domain={["auto","auto"]} />
+                    <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsla(var(--glass-border))", borderRadius: 8, color: "#fff" }} formatter={(v: number) => [`$${v.toFixed(2)}`, "Price"]} />
+                    <Line type="monotone" dataKey={chartSlice[0]?.price ? "price" : "close"} stroke={isUp ? "hsl(var(--primary))" : "hsl(var(--destructive))"} strokeWidth={2} dot={false} activeDot={{ r: 5 }} />
+                  </LineChart>
+                </ResponsiveContainer>
+              )}
             </div>
             <div className="grid grid-cols-3 gap-3">
-              <StatBox label="Open Price" value={`$${(selected.currentPrice - selected.change).toFixed(2)}`} />
-              <StatBox label="Day High" value={`$${(selected.currentPrice + Math.abs(selected.change) * 0.4).toFixed(2)}`} />
-              <StatBox label="Day Low" value={`$${(selected.currentPrice - Math.abs(selected.change) * 1.2).toFixed(2)}`} />
+              <StatBox label="Open Price" value={`$${(currentPrice - change).toFixed(2)}`} />
+              <StatBox label="Day High" value={`$${(currentPrice + Math.abs(change) * 0.4).toFixed(2)}`} />
+              <StatBox label="Day Low" value={`$${(currentPrice - Math.abs(change) * 1.2).toFixed(2)}`} />
             </div>
           </TabsContent>
 
           {/* ── TAB: P&L ── */}
           <TabsContent value="pnl" className="space-y-6">
             <div className="glass-card p-4">
-              <ResponsiveContainer width="100%" height={280}>
-                <BarChart data={[...companyPL].reverse()}>
-                  <XAxis dataKey="quarter" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} tickLine={false} axisLine={false} />
-                  <YAxis tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} tickLine={false} axisLine={false} tickFormatter={(v: number) => `$${v}B`} />
-                  <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsla(var(--glass-border))", borderRadius: 8, color: "#fff" }} formatter={(v: number) => [`$${v}B`]} />
-                  <Legend />
-                  <Bar dataKey="revenue" name="Revenue" fill="#00b4ff" radius={[4,4,0,0]} />
-                  <Bar dataKey="expenses" name="Expenses" fill="#ff4444" radius={[4,4,0,0]} />
-                  <Bar dataKey="netProfit" name="Net Profit" fill="#00ff88" radius={[4,4,0,0]} />
-                </BarChart>
-              </ResponsiveContainer>
+              {financialData.loading ? (
+                <div className="h-[280px] bg-muted animate-pulse rounded" />
+              ) : (
+                <ResponsiveContainer width="100%" height={280}>
+                  <BarChart data={[...companyPL].reverse()}>
+                    <XAxis dataKey="quarter" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} tickLine={false} axisLine={false} />
+                    <YAxis tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} tickLine={false} axisLine={false} tickFormatter={(v: number) => `$${v}B`} />
+                    <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsla(var(--glass-border))", borderRadius: 8, color: "#fff" }} formatter={(v: number) => [`$${v}B`]} />
+                    <Legend />
+                    <Bar dataKey="revenue" name="Revenue" fill="#00b4ff" radius={[4,4,0,0]} />
+                    <Bar dataKey="expenses" name="Expenses" fill="#ff4444" radius={[4,4,0,0]} />
+                    <Bar dataKey="netProfit" name="Net Profit" fill="#00ff88" radius={[4,4,0,0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
             </div>
+
+            {/* Error alert for financial data */}
+            {financialData.error && (
+              <Alert variant="default" className="bg-yellow-500/10 border-yellow-500/20">
+                <AlertCircle className="h-4 w-4 text-yellow-600" />
+                <AlertDescription className="text-yellow-700 text-xs ml-2">
+                  {financialData.error}
+                </AlertDescription>
+              </Alert>
+            )}
 
             {/* table */}
             <div className="glass-card overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="bg-muted/30 text-muted-foreground">
-                    {["Quarter","Revenue","Expenses","Net Profit","Margin %","vs Last Q"].map((h) => (
-                      <th key={h} className="px-4 py-3 text-left font-medium whitespace-nowrap">{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {companyPL.map((q) => (
-                    <tr
-                      key={q.quarter}
-                      className={`border-t border-[hsla(var(--glass-border))] ${q.netProfit >= 0 ? "bg-primary/5" : "bg-destructive/5"}`}
-                    >
-                      <td className="px-4 py-3 font-medium text-foreground">{q.quarter}</td>
-                      <td className="px-4 py-3 text-foreground">${q.revenue}B</td>
-                      <td className="px-4 py-3 text-destructive">${q.expenses}B</td>
-                      <td className="px-4 py-3 text-primary">${q.netProfit}B</td>
-                      <td className="px-4 py-3 text-foreground">{q.profitMargin}%</td>
-                      <td className={`px-4 py-3 font-medium ${q.changeFromLastQuarter >= 0 ? "text-primary" : "text-destructive"}`}>
-                        {q.changeFromLastQuarter >= 0 ? "+" : ""}{q.changeFromLastQuarter}%
-                      </td>
+              {financialData.loading ? (
+                <div className="h-32 bg-muted animate-pulse rounded" />
+              ) : (
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-muted/30 text-muted-foreground">
+                      {["Quarter","Revenue","Expenses","Net Profit","Margin %","vs Last Q"].map((h) => (
+                        <th key={h} className="px-4 py-3 text-left font-medium whitespace-nowrap">{h}</th>
+                      ))}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {companyPL.map((q) => (
+                      <tr
+                        key={q.quarter}
+                        className={`border-t border-[hsla(var(--glass-border))] ${q.netProfit >= 0 ? "bg-primary/5" : "bg-destructive/5"}`}
+                      >
+                        <td className="px-4 py-3 font-medium text-foreground">{q.quarter}</td>
+                        <td className="px-4 py-3 text-foreground">${q.revenue}B</td>
+                        <td className="px-4 py-3 text-destructive">${q.expenses}B</td>
+                        <td className="px-4 py-3 text-primary">${q.netProfit}B</td>
+                        <td className="px-4 py-3 text-foreground">{q.profitMargin}%</td>
+                        <td className={`px-4 py-3 font-medium ${q.changeFromLastQuarter >= 0 ? "text-primary" : "text-destructive"}`}>
+                          {q.changeFromLastQuarter >= 0 ? "+" : ""}{q.changeFromLastQuarter}%
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
             </div>
           </TabsContent>
 
@@ -360,34 +416,55 @@ const Company = () => {
 
           {/* ── TAB: NEWS ── */}
           <TabsContent value="news" className="space-y-4">
-            {companyNews.length === 0 && <p className="text-muted-foreground text-sm">No recent news for this company.</p>}
-            {companyNews.map((n) => (
-              <div
-                key={n.id}
-                className={`glass-card p-4 border-l-4 transition-all hover:translate-y-[-2px] hover:shadow-lg ${
-                  n.sentiment === "positive" ? "border-l-primary" : n.sentiment === "negative" ? "border-l-destructive" : "border-l-muted-foreground"
-                }`}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="space-y-1">
-                    <h4 className="text-sm font-semibold text-foreground leading-snug">{n.headline}</h4>
-                    <p className="text-xs text-muted-foreground">{n.source} · {n.time}</p>
-                    <p className="text-xs text-muted-foreground mt-1">{n.summary}</p>
+            {newsData.error && (
+              <Alert variant="default" className="bg-yellow-500/10 border-yellow-500/20">
+                <AlertCircle className="h-4 w-4 text-yellow-600" />
+                <AlertDescription className="text-yellow-700 text-xs ml-2">
+                  {newsData.error}
+                </AlertDescription>
+              </Alert>
+            )}
+            {newsData.loading ? (
+              <>
+                {[...Array(3)].map((_, i) => (
+                  <div key={i} className="glass-card p-4 h-24 bg-muted animate-pulse rounded" />
+                ))}
+              </>
+            ) : companyNews.length === 0 ? (
+              <p className="text-muted-foreground text-sm">No recent news for this company.</p>
+            ) : (
+              companyNews.map((n) => (
+                <a
+                  key={n.headline}
+                  href={n.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`glass-card p-4 border-l-4 transition-all hover:translate-y-[-2px] hover:shadow-lg cursor-pointer ${
+                    n.sentiment === "positive" ? "border-l-primary" : n.sentiment === "negative" ? "border-l-destructive" : "border-l-muted-foreground"
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="space-y-1">
+                      <h4 className="text-sm font-semibold text-foreground leading-snug">{n.headline}</h4>
+                      <p className="text-xs text-muted-foreground">{n.source} · {n.time}</p>
+                      <p className="text-xs text-muted-foreground mt-1">{n.summary}</p>
+                    </div>
+                    <Badge
+                      className={
+                        n.sentiment === "positive"
+                          ? "bg-primary/20 text-primary border-primary/30 shrink-0"
+                          : n.sentiment === "negative"
+                          ? "bg-destructive/20 text-destructive border-destructive/30 shrink-0"
+                          : "bg-muted text-muted-foreground shrink-0"
+                      }
+                    >
+                      {n.sentiment}
+                    </Badge>
                   </div>
-                  <Badge
-                    className={
-                      n.sentiment === "positive"
-                        ? "bg-primary/20 text-primary border-primary/30 shrink-0"
-                        : n.sentiment === "negative"
-                        ? "bg-destructive/20 text-destructive border-destructive/30 shrink-0"
-                        : "bg-muted text-muted-foreground shrink-0"
-                    }
-                  >
-                    {n.sentiment}
-                  </Badge>
-                </div>
-              </div>
-            ))}
+                </a>
+              ))
+            )}
+            <p className="text-xs text-muted-foreground mt-4">Data by NewsAPI &nbsp;— Click articles to read full stories</p>
           </TabsContent>
 
           {/* ── TAB: AI ANALYSIS ── */}

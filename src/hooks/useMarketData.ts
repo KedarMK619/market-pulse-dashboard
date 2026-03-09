@@ -1,0 +1,2 @@
+// Placeholder: useMarketData hook
+export {};

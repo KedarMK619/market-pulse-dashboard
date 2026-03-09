@@ -1,0 +1,2 @@
+// Placeholder: AreaChart component
+export {};

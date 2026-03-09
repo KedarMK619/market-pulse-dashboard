@@ -1,0 +1,2 @@
+// Placeholder: Sparkline component
+export {};

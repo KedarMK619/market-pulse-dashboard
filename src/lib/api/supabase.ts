@@ -1,0 +1,2 @@
+// Placeholder: Supabase client
+export {};

@@ -1,0 +1,2 @@
+// Placeholder: AlertCard component
+export {};

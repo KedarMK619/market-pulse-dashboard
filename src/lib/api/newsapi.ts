@@ -1,0 +1,2 @@
+// Placeholder: News API
+export {};

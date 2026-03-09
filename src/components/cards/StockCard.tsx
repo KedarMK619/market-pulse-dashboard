@@ -1,0 +1,2 @@
+// Placeholder: StockCard component
+export {};

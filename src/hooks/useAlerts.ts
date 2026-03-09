@@ -1,0 +1,2 @@
+// Placeholder: useAlerts hook
+export {};

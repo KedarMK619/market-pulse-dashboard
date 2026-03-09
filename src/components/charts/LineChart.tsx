@@ -1,0 +1,2 @@
+// Placeholder: LineChart component
+export {};

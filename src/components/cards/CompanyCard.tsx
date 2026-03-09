@@ -1,0 +1,2 @@
+// Placeholder: CompanyCard component
+export {};

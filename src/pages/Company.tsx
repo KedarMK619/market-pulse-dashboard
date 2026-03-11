@@ -18,6 +18,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useStockData } from "@/hooks/useStockData";
 import { useCompanyNews } from "@/hooks/useNewsData";
 import { useCompanyFinancials } from "@/hooks/useFinancialData";
+import { analyzeMarket } from "@/lib/api/gemini";
 
 // ── helpers ──
 const sectorColors: Record<string, string> = {
@@ -103,16 +104,28 @@ const Company = () => {
     { name: "India", value: 15 + Math.round(selected.demandScore * 0.20) },
   ];
 
-  const handleAsk = () => {
+  const handleAsk = async () => {
+    if (!aiQuestion.trim()) return;
+
     setAiLoading(true);
     setAiResponse(null);
-    setTimeout(() => {
+
+    try {
+      const marketContext = {
+        company: selected,
+        stockData: stockData.quote,
+        financialData: companyPL,
+        newsData: companyNews,
+        demandScore: selected.demandScore,
+        demandChange: selected.demandChange
+      };
+      const response = await analyzeMarket(aiQuestion, marketContext);
+      setAiResponse(`${response}\n\n⚠️ AI Generated - Educational Only\nPowered by Gemini AI`);
+    } catch (error) {
+      setAiResponse('Analysis temporarily unavailable. Please try again shortly. ⚠️ Educational project only.\n\n⚠️ AI Generated - Educational Only\nPowered by Gemini AI');
+    } finally {
       setAiLoading(false);
-      const plData = companyPL[0];
-      setAiResponse(
-        `Based on current market data, ${selected.name} shows ${isUp ? "strong" : "mixed"} fundamentals with ${isUp ? "consistent revenue growth" : "some revenue pressure"} over the last 4 quarters.\n\n• Revenue trend: ${isUp ? "Upward" : "Under pressure"} — latest quarter at $${plData?.revenue ?? "N/A"}B\n• Profit margin: ${plData?.profitMargin.toFixed(2) ?? "N/A"}% ${(plData?.changeFromLastQuarter ?? 0) >= 0 ? "improving" : "declining"}\n• Demand score: ${selected.demandScore}/100 (${selected.demandChange >= 0 ? "+" : ""}${selected.demandChange}% change)\n• Market position: ${selected.status} with $${selected.marketCap} market cap\n\nWatch for margin pressure in Q4 due to increased competition and macro headwinds.`
-      );
-    }, 2000);
+    }
   };
 
   const suggestedQuestions = [
@@ -512,7 +525,7 @@ const Company = () => {
                     `Based on current market data, ${selected.name} shows strong fundamentals with consistent revenue growth over the last 4 quarters. Key strengths include market dominance in core segments and growing demand score. Watch for margin pressure in Q4 due to increased competition.`}
                 </div>
               )}
-              <p className="text-xs text-muted-foreground/60 mt-4">Powered by Claude AI</p>
+              <p className="text-xs text-muted-foreground/60 mt-4">Powered by Gemini AI</p>
             </div>
           </TabsContent>
         </Tabs>

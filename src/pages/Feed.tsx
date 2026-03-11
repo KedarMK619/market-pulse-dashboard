@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Brain, RefreshCw, Zap, AlertCircle } from "lucide-react";
 import { companies, marketAlerts } from "@/lib/mock/mockData";
@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useNavigate } from "react-router-dom";
 import { useMarketNewsFeed } from "@/hooks/useNewsData";
+import { generateMarketSummary } from "@/lib/api/gemini";
 
 const filters = ["All", "Stocks", "Products", "Companies", "Sectors"];
 const typeBadge: Record<string, string> = {
@@ -21,10 +22,33 @@ const fadeUp = { hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0 } };
 const Feed = () => {
   const [activeFilter, setActiveFilter] = useState("All");
   const [visibleCount, setVisibleCount] = useState(10);
+  const [aiSummary, setAiSummary] = useState<string | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
   const navigate = useNavigate();
   
   // Fetch real market news
   const newsData = useMarketNewsFeed();
+
+  const loadAiSummary = async () => {
+    setAiLoading(true);
+    try {
+      const marketData = { companies, marketAlerts };
+      const summary = await generateMarketSummary(marketData);
+      setAiSummary(summary);
+    } catch (error) {
+      setAiSummary('Market summary temporarily unavailable. ⚠️ Educational analysis only.');
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadAiSummary();
+  }, []);
+
+  const handleRefreshAi = () => {
+    loadAiSummary();
+  };
 
   // Convert news to alert format for display
   const newsAlerts = newsData.articles.map((article, idx) => ({
@@ -76,17 +100,21 @@ const Feed = () => {
           <div className="flex items-center gap-2 mb-3">
             <Brain className="h-5 w-5 text-primary" />
             <h2 className="text-lg font-semibold text-foreground">Today's Market Summary</h2>
-            <button className="ml-auto p-1.5 rounded-lg hover:bg-muted/50 transition-colors">
-              <RefreshCw className="h-4 w-4 text-muted-foreground" />
+            <button
+              onClick={handleRefreshAi}
+              disabled={aiLoading}
+              className="ml-auto p-1.5 rounded-lg hover:bg-muted/50 transition-colors disabled:opacity-50"
+            >
+              <RefreshCw className={`h-4 w-4 text-muted-foreground ${aiLoading ? 'animate-spin' : ''}`} />
             </button>
           </div>
           <p className="text-sm text-muted-foreground leading-relaxed">
-            {newsData.loading 
-              ? "Loading real-time market analysis..."
-              : "Markets closed the day on a cautiously optimistic note. Technology sector led gains with AI-driven stocks surging. Tesla faced selling pressure in European markets while Apple held strong. Energy sector remains volatile amid oil price uncertainty. Overall market breadth was positive with 6 out of 10 tracked companies gaining."}
+            {aiLoading
+              ? "Generating real-time market analysis..."
+              : aiSummary || "Markets closed the day on a cautiously optimistic note. Technology sector led gains with AI-driven stocks surging. Tesla faced selling pressure in European markets while Apple held strong. Energy sector remains volatile amid oil price uncertainty. Overall market breadth was positive with 6 out of 10 tracked companies gaining."}
           </p>
           <p className="text-xs text-muted-foreground mt-3">
-            {newsData.lastUpdated ? `Updated ${new Date(newsData.lastUpdated).toLocaleTimeString()}` : "Updated 5 minutes ago"}
+            Powered by Gemini AI
           </p>
         </div>
       </motion.div>

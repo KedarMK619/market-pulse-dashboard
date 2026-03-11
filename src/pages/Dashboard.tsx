@@ -41,6 +41,7 @@ import {
 } from "@/lib/mock/mockData";
 import { formatCurrency } from "@/lib/utils/formatCurrency";
 import { useState, useEffect } from "react";
+import { generateMarketSummary } from "@/lib/api/gemini";
 
 const fadeUp = (delay = 0) => ({
   initial: { opacity: 0, y: 20 },
@@ -282,11 +283,35 @@ const RefreshCountdown = () => {
 // Dashboard Page
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 const Dashboard = () => {
+  const [aiSummary, setAiSummary] = useState<string | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+
   const top5 = companies.slice(0, 5);
   const sparkData = marketIndices[2].chartData.map((d) => ({
     date: d.date,
     value: d.value,
   }));
+
+  const loadAiSummary = async () => {
+    setAiLoading(true);
+    try {
+      const marketData = { marketIndices, sectors, summaryStats };
+      const summary = await generateMarketSummary(marketData);
+      setAiSummary(summary);
+    } catch (error) {
+      setAiSummary('Market summary temporarily unavailable. ⚠️ Educational analysis only.');
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadAiSummary();
+  }, []);
+
+  const handleRefreshAi = () => {
+    loadAiSummary();
+  };
 
   return (
     <div className="space-y-8">
@@ -469,15 +494,25 @@ const Dashboard = () => {
                 <span className="text-sm font-semibold text-foreground">AI Insight</span>
               </div>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                Today's market shows cautious optimism. Technology sector leads with +3.2% gains
-                driven by AI chip demand surge. Tesla faces headwinds in Europe while Apple maintains
-                strong consumer demand globally. Watch energy sector — oil price volatility may
-                impact broader market sentiment.
+                {aiLoading ? (
+                  <span className="flex items-center gap-2">
+                    <RefreshCw className="h-4 w-4 animate-spin" />
+                    Generating market summary...
+                  </span>
+                ) : (
+                  aiSummary || "Today's market shows cautious optimism. Technology sector leads with +3.2% gains driven by AI chip demand surge. Tesla faces headwinds in Europe while Apple maintains strong consumer demand globally. Watch energy sector — oil price volatility may impact broader market sentiment."
+                )}
               </p>
               <div className="flex items-center justify-between mt-4 pt-3 border-t border-[hsla(var(--glass-border))]">
-                <span className="text-[10px] text-muted-foreground">Powered by Claude AI</span>
-                <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground">
-                  <RefreshCw className="h-3.5 w-3.5" />
+                <span className="text-[10px] text-muted-foreground">Powered by Gemini AI</span>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                  onClick={handleRefreshAi}
+                  disabled={aiLoading}
+                >
+                  <RefreshCw className={`h-3.5 w-3.5 ${aiLoading ? 'animate-spin' : ''}`} />
                 </Button>
               </div>
             </div>

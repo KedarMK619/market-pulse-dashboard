@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Send, Lightbulb, TrendingUp, BarChart3, Star, Brain, MessageCircle, Zap, RotateCcw, Circle } from "lucide-react";
 import { companies, products } from "@/lib/mock/mockData";
+import { analyzeMarket } from "@/lib/api/gemini";
 
 interface ChatMessage {
   id: string;
@@ -30,74 +31,6 @@ const AiInsights = () => {
     scrollToBottom();
   }, [messages]);
 
-  const generateAIResponse = (prompt: string): string => {
-    const promptLower = prompt.toLowerCase();
-
-    if (promptLower.includes("sector")) {
-      return `📊 Sector Performance Analysis
-• Technology leads with +3.2% growth
-• Healthcare shows -1.1% decline
-• Retail gaining +1.7%
-• Energy faces -2.4% headwinds
-
-💡 Recommended: Sector Heatmap`;
-    } else if (promptLower.includes("apple") || promptLower.includes("microsoft")) {
-      return `📈 Company Analysis
-• Revenue growth +18% year over year
-• Demand score 87/100
-• Profit margins improving 3 quarters
-• Key risk: increasing competition
-
-💡 Recommended: Line Chart`;
-    } else if (promptLower.includes("product") || promptLower.includes("demand")) {
-      return `🛍️ Product Demand Insights
-• AI Chips demand surge +34%
-• EV Batteries up +28%
-• Organic Food growing +12%
-• Luxury Watches dropped -8%
-
-💡 Recommended: Area Chart`;
-    } else if (promptLower.includes("tesla")) {
-      return `📉 Tesla Analysis
-• Current demand score: 68/100 (down -8.4%)
-• Regional strength: North America at 72%
-• Challenges: European market declining
-• Q3 margin pressure from competition
-• Recovery potential in AI/autonomous tech
-
-💡 Recommended: Regional Comparison Chart`;
-    } else if (promptLower.includes("compare")) {
-      return `⚖️ Comparative Analysis
-• Apple: Higher margins, stable growth
-• Microsoft: Stronger cloud revenue
-• Meta: Higher volatility, growth upside
-• Average revenue growth: 14.5%
-• Tech sector outperforming market by 2.8%
-
-💡 Recommended: Multi-Line Comparison`;
-    } else if (promptLower.includes("market") || promptLower.includes("summary")) {
-      return `📊 Market Summary
-• Top performers: MSFT (+1.76%), META (+1.76%), AAPL (+1.84%)
-• Biggest decliners: RELIANCE (-1.32%), SAMSUNG (-1.33%)
-• Market sentiment: 67% bullish, 33% bearish
-• Trading volume up 12% vs. average
-• Volatility index at moderate levels
-
-💡 Recommended: Market Overview Dashboard`;
-    } else {
-      return `💡 Market Insights
-I can help you analyze stocks, compare companies, track product demand trends, and understand market patterns. Here are some areas I specialize in:
-
-• Company fundamentals & financial metrics
-• Sector performance & trends
-• Product demand analysis
-• Market sentiment & trends
-• Comparative company analysis
-
-Try asking me about specific sectors, companies, or products!`;
-    }
-  };
-
   const handleSendMessage = async (messageText: string = inputValue) => {
     if (!messageText.trim()) return;
 
@@ -122,19 +55,32 @@ Try asking me about specific sectors, companies, or products!`;
     };
     setMessages((prev) => [...prev, typingMessage]);
 
-    // Simulate 2 second delay
-    setTimeout(() => {
+    try {
+      const marketContext = { companies, products };
+      const aiResponse = await analyzeMarket(messageText, marketContext);
+
       setMessages((prev) => prev.filter((msg) => !msg.isTyping));
 
       const aiMessage: ChatMessage = {
         id: `ai-${Date.now()}`,
         type: "ai",
-        content: generateAIResponse(messageText),
+        content: `${aiResponse}\n\n⚠️ AI Generated - Educational Only\nPowered by Gemini AI`,
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, aiMessage]);
+    } catch (error) {
+      setMessages((prev) => prev.filter((msg) => !msg.isTyping));
+
+      const errorMessage: ChatMessage = {
+        id: `ai-${Date.now()}`,
+        type: "ai",
+        content: "Analysis temporarily unavailable. Please try again shortly. ⚠️ Educational project only.\n\n⚠️ AI Generated - Educational Only\nPowered by Gemini AI",
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, errorMessage]);
+    } finally {
       setIsLoading(false);
-    }, 2000);
+    }
   };
 
   const handlePromptClick = (prompt: string) => {
@@ -251,7 +197,7 @@ Try asking me about specific sectors, companies, or products!`;
             </div>
             <div>
               <h2 className="text-lg font-semibold text-foreground">MarketPulse AI</h2>
-              <p className="text-xs text-muted-foreground">Powered by Claude AI</p>
+              <p className="text-xs text-muted-foreground">Powered by Gemini AI</p>
             </div>
             <div className="flex items-center gap-2 ml-4">
               <Circle className="h-2.5 w-2.5 text-primary animate-pulse" />

@@ -1,6 +1,7 @@
-# Welcome to your Lovable project
+##My First vibe coded working project
+## Welcome to your Lovable project
 
-## Project info
+### Project info
 
 **URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
 

@@ -10,8 +10,17 @@ import {
 } from "@/lib/api/alphaVantage";
 import { testNewsAPIConnection } from "@/lib/api/newsapi";
 import { testFMPConnection } from "@/lib/api/fmp";
+import { useAppearance } from "@/contexts/AppearanceContext";
 
 const SettingsPage = () => {
+  const {
+    darkMode,
+    compactView,
+    animationsEnabled,
+    setDarkMode,
+    setCompactView,
+    setAnimationsEnabled,
+  } = useAppearance();
   const [apiStatus, setApiStatus] = useState({
     alphaVantage: { status: "testing", lastCheck: null as Date | null },
     newsAPI: { status: "testing", lastCheck: null as Date | null },
@@ -19,7 +28,6 @@ const SettingsPage = () => {
   });
 
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
-  const [darkMode, setDarkMode] = useState(true);
 
   // Test API connections on mount
   useEffect(() => {
@@ -270,7 +278,7 @@ const SettingsPage = () => {
                 <p className="text-sm font-medium text-foreground">Compact View</p>
                 <p className="text-xs text-muted-foreground">Reduce spacing and size</p>
               </div>
-              <Switch />
+              <Switch checked={compactView} onCheckedChange={setCompactView} />
             </div>
 
             <div className="flex items-center justify-between">
@@ -278,7 +286,7 @@ const SettingsPage = () => {
                 <p className="text-sm font-medium text-foreground">Animations</p>
                 <p className="text-xs text-muted-foreground">Enable smooth transitions</p>
               </div>
-              <Switch defaultChecked />
+              <Switch checked={animationsEnabled} onCheckedChange={setAnimationsEnabled} />
             </div>
           </div>
         </Card>

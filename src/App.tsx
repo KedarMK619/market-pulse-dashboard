@@ -3,6 +3,8 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { MotionConfig } from "framer-motion";
+import { AppearanceProvider, useAppearance } from "./contexts/AppearanceContext";
 import AppLayout from "./components/layout/AppLayout";
 import Dashboard from "./pages/Dashboard";
 import Company from "./pages/Company";
@@ -19,31 +21,46 @@ import TermsOfService from "./pages/TermsOfService";
 
 const queryClient = new QueryClient();
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
+const AppContents = () => {
+  const { animationsEnabled } = useAppearance();
+
+  return (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/auth" element={<Auth />} />
-          <Route element={<AppLayout />}>
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/company" element={<Company />} />
-            <Route path="/products" element={<Products />} />
-            <Route path="/feed" element={<Feed />} />
-            <Route path="/ai-insights" element={<AiInsights />} />
-            <Route path="/watchlist" element={<Watchlist />} />
-            <Route path="/settings" element={<SettingsPage />} />
-            <Route path="/disclaimer" element={<Disclaimer />} />
-            <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-            <Route path="/terms-of-service" element={<TermsOfService />} />
-          </Route>
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
+      <MotionConfig
+        reducedMotion={animationsEnabled ? "never" : "always"}
+        transition={animationsEnabled ? undefined : { duration: 0 }}
+      >
+        <BrowserRouter>
+          <Routes>
+            <Route path="/auth" element={<Auth />} />
+            <Route element={<AppLayout />}>
+              <Route path="/" element={<Navigate to="/dashboard" replace />} />
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/company" element={<Company />} />
+              <Route path="/products" element={<Products />} />
+              <Route path="/feed" element={<Feed />} />
+              <Route path="/ai-insights" element={<AiInsights />} />
+              <Route path="/watchlist" element={<Watchlist />} />
+              <Route path="/settings" element={<SettingsPage />} />
+              <Route path="/disclaimer" element={<Disclaimer />} />
+              <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+              <Route path="/terms-of-service" element={<TermsOfService />} />
+            </Route>
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </MotionConfig>
     </TooltipProvider>
+  );
+};
+
+const App = () => (
+  <QueryClientProvider client={queryClient}>
+    <AppearanceProvider>
+      <AppContents />
+    </AppearanceProvider>
   </QueryClientProvider>
 );
 

@@ -131,9 +131,13 @@ export const getIncomeStatement = async (symbol: string): Promise<QuarterlyData[
     return data.slice(0, 4).map((item: any, idx: number) => {
       const prevRevenue = idx > 0 ? data[idx - 1].revenue : data[idx].revenue;
       const changePercent = ((item.revenue - prevRevenue) / prevRevenue) * 100;
+      const statementDate = item.date ? new Date(item.date) : null;
+      const quarterLabel = statementDate && !Number.isNaN(statementDate.getTime())
+        ? `Q${Math.floor(statementDate.getMonth() / 3) + 1} ${statementDate.getFullYear()}`
+        : `Q${4 - idx}`;
 
       return {
-        quarter: item.date ? new Date(item.date).toLocaleString("en-US", { year: "numeric", quarter: "short" }) : `Q${4 - idx}`,
+        quarter: quarterLabel,
         revenue: item.revenue / 1000000000, // Convert to billions
         expenses: (item.revenue - item.netIncome) / 1000000000,
         netProfit: item.netIncome / 1000000000,

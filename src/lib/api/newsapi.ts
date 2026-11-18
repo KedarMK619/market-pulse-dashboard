@@ -64,7 +64,7 @@ const getMockNews = (): NewsArticle[] => {
     url: "#",
     summary: item.summary,
     sentiment: item.sentiment as "positive" | "negative" | "neutral",
-    imageUrl: item.imageUrl,
+    imageUrl: "imageUrl" in item && typeof item.imageUrl === "string" ? item.imageUrl : undefined,
   }));
 };
 

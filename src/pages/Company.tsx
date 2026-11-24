@@ -18,6 +18,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useStockData } from "@/hooks/useStockData";
 import { useCompanyNews } from "@/hooks/useNewsData";
 import { useCompanyFinancials } from "@/hooks/useFinancialData";
+import { useWatchlist } from "@/hooks/useWatchlist";
 import { analyzeMarket } from "@/lib/api/gemini";
 
 // ── helpers ──
@@ -44,6 +45,8 @@ const Company = () => {
   const [aiLoading, setAiLoading] = useState(false);
   const [aiResponse, setAiResponse] = useState<string | null>(null);
   const [timeRange, setTimeRange] = useState<"1D" | "1W" | "1M" | "1Y">("1M");
+  const { watchlist, addCompany, removeCompany } = useWatchlist();
+  const selectedIsWatched = watchlist.some((item) => item.id === selected.id);
 
   // Fetch real data from APIs
   const stockData = useStockData(selected.symbol);
@@ -237,8 +240,13 @@ const Company = () => {
               </p>
             )}
 
-            <Button variant="outline" size="sm" className="border-primary/40 text-primary hover:bg-primary/10 mt-2">
-              <Bookmark className="h-4 w-4 mr-1" /> Add to Watchlist
+            <Button
+              variant="outline"
+              size="sm"
+              className={`mt-2 border-primary/40 ${selectedIsWatched ? "bg-primary/10 text-primary hover:bg-primary/20" : "text-primary hover:bg-primary/10"}`}
+              onClick={() => selectedIsWatched ? removeCompany(selected.id) : addCompany(selected)}
+            >
+              <Bookmark className="h-4 w-4 mr-1" /> {selectedIsWatched ? "In Watchlist" : "Add to Watchlist"}
             </Button>
           </div>
         </div>

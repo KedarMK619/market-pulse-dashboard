@@ -8,8 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useNavigate } from "react-router-dom";
-
-type WatchItem = { id: string; name: string; symbol: string; type: string; value: number; changePercent: number; alertSet: boolean };
+import { useWatchlist } from "@/hooks/useWatchlist";
 
 const mockAlertHistory = [
   { id: "ah1", message: "Tesla fell below $240 threshold", time: "2 hours ago" },
@@ -22,7 +21,7 @@ const mockAlertHistory = [
 const fadeUp = { hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0 } };
 
 const Watchlist = () => {
-  const [watchlist, setWatchlist] = useState<WatchItem[]>([]);
+  const { watchlist, addCompany, removeCompany, toggleAlert } = useWatchlist();
   const [searchQ, setSearchQ] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [alertCompany, setAlertCompany] = useState("");
@@ -39,14 +38,12 @@ const Watchlist = () => {
   );
 
   const addToWatchlist = (c: typeof companies[0]) => {
-    if (watchlist.find((w) => w.id === c.id)) return;
-    setWatchlist((prev) => [...prev, { id: c.id, name: c.name, symbol: c.symbol, type: "Company", value: c.currentPrice, changePercent: c.changePercent, alertSet: false }]);
+    addCompany(c);
     setDialogOpen(false);
     setSearchQ("");
   };
 
-  const removeItem = (id: string) => setWatchlist((prev) => prev.filter((w) => w.id !== id));
-  const toggleAlert = (id: string) => setWatchlist((prev) => prev.map((w) => w.id === id ? { ...w, alertSet: !w.alertSet } : w));
+  const removeItem = (id: string) => removeCompany(id);
 
   const handleSetAlert = () => {
     if (!alertCompany || !alertThreshold) return;
@@ -75,15 +72,16 @@ const Watchlist = () => {
             </div>
             <div className="max-h-60 overflow-y-auto space-y-1 mt-2">
               {filteredCompanies.map((c) => (
-                <button
+                <Button
+                  variant="ghost"
                   key={c.id}
                   onClick={() => addToWatchlist(c)}
-                  className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors text-left"
+                  className="h-auto w-full justify-start gap-3 p-3 text-left"
                 >
                   <Badge variant="outline" className="text-xs">{c.symbol}</Badge>
                   <span className="text-sm text-foreground flex-1">{c.name}</span>
                   <span className="text-xs text-muted-foreground">{c.sector}</span>
-                </button>
+                </Button>
               ))}
             </div>
           </DialogContent>
@@ -127,12 +125,12 @@ const Watchlist = () => {
                     {w.alertSet ? <Check className="inline h-4 w-4 text-primary" /> : <Minus className="inline h-4 w-4 text-muted-foreground" />}
                   </td>
                   <td className="py-3 px-4 text-center">
-                    <button onClick={() => toggleAlert(w.id)} className="p-1.5 rounded hover:bg-muted/50 transition-colors mr-1">
-                      <Bell className="h-4 w-4 text-muted-foreground hover:text-primary" />
-                    </button>
-                    <button onClick={() => removeItem(w.id)} className="p-1.5 rounded hover:bg-destructive/20 transition-colors">
-                      <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
-                    </button>
+                    <Button variant="ghost" size="icon" aria-label={`${w.alertSet ? "Disable" : "Enable"} alert for ${w.name}`} onClick={() => toggleAlert(w.id)} className="mr-1">
+                      <Bell className="h-4 w-4" />
+                    </Button>
+                    <Button variant="ghost" size="icon" aria-label={`Remove ${w.name} from watchlist`} onClick={() => removeItem(w.id)}>
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </td>
                 </tr>
               ))}

@@ -6,11 +6,11 @@ MarketPulse is an educational market dashboard for exploring company data, marke
 
 ## Preview
 
-There is no public hosted demo configured for this repository yet. To preview the working app in your browser, start the development server (see [Getting started](#getting-started)) and open:
+Try the working app in your browser with StackBlitz; it opens the project and starts an online preview without requiring a local server:
 
-**[Open the local MarketPulse preview](http://localhost:8080/)**
+**[Open and run MarketPulse in your browser](https://stackblitz.com/github/KedarMK619/market-pulse-dashboard)**
 
-This address is available on the computer where the development server is running; it is not a public deployment.
+To run the project on your computer instead, see [Getting started](#getting-started).
 
 ## What you can explore
 

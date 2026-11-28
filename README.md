@@ -6,9 +6,9 @@ MarketPulse is an educational market dashboard for exploring company data, marke
 
 ## Preview
 
-Try the working app in your browser with StackBlitz; it opens the project and starts an online preview without requiring a local server:
+Open the live preview:
 
-**[Open and run MarketPulse in your browser](https://stackblitz.com/github/KedarMK619/market-pulse-dashboard)**
+**[Preview MarketPulse](https://preview--signal-scout-market-intel.lovable.app/dashboard)**
 
 To run the project on your computer instead, see [Getting started](#getting-started).
 

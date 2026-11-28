@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Brain, RefreshCw, Zap, AlertCircle } from "lucide-react";
+import { Brain, RefreshCw, Zap, AlertCircle, ChevronRight } from "lucide-react";
 import { companies, marketAlerts } from "@/lib/mock/mockData";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -11,13 +11,13 @@ import { generateMarketSummary } from "@/lib/api/gemini";
 
 const filters = ["All", "Stocks", "Products", "Companies", "Sectors"];
 const typeBadge: Record<string, string> = {
-  "Price Change": "bg-secondary/20 text-secondary",
-  "Demand Spike": "bg-purple-500/20 text-purple-400",
-  "Profit Report": "bg-primary/20 text-primary",
-  "News Impact": "bg-yellow-500/20 text-yellow-400",
+  "Price Change": "bg-[#2FA8D8]/20 text-[#2FA8D8] border-[#2FA8D8]/30",
+  "Demand Spike": "bg-[#FFE055]/20 text-[#FFE055] border-[#FFE055]/30",
+  "Profit Report": "bg-[#1BF2B3]/20 text-[#1BF2B3] border-[#1BF2B3]/30",
+  "News Impact": "bg-[#FF7597]/20 text-[#FF7597] border-[#FF7597]/30",
 };
 
-const fadeUp = { hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0 } };
+const fadeUp = { hidden: { opacity: 0, y: 16 }, show: { opacity: 1, y: 0 } };
 
 const Feed = () => {
   const [activeFilter, setActiveFilter] = useState("All");
@@ -25,8 +25,7 @@ const Feed = () => {
   const [aiSummary, setAiSummary] = useState<string | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
   const navigate = useNavigate();
-  
-  // Fetch real market news
+
   const newsData = useMarketNewsFeed();
 
   const loadAiSummary = async () => {
@@ -35,8 +34,8 @@ const Feed = () => {
       const marketData = { companies, marketAlerts };
       const summary = await generateMarketSummary(marketData);
       setAiSummary(summary);
-    } catch (error) {
-      setAiSummary('Market summary temporarily unavailable. ⚠️ Educational analysis only.');
+    } catch {
+      setAiSummary("Market summary temporarily unavailable. ⚠️ Educational analysis only.");
     } finally {
       setAiLoading(false);
     }
@@ -46,33 +45,47 @@ const Feed = () => {
     loadAiSummary();
   }, []);
 
-  const handleRefreshAi = () => {
-    loadAiSummary();
-  };
-
-  // Convert news to alert format for display
   const newsAlerts = newsData.articles.map((article, idx) => ({
     id: `news-${idx}`,
     company: article.source,
-    type: article.sentiment === "positive" ? "News Impact" : article.sentiment === "negative" ? "Price Change" : "News Impact",
-    changePercent: article.sentiment === "positive" ? Math.random() * 5 + 2 : -(Math.random() * 5 + 1),
+    type:
+      article.sentiment === "positive"
+        ? "News Impact"
+        : article.sentiment === "negative"
+        ? "Price Change"
+        : "News Impact",
+    changePercent:
+      article.sentiment === "positive" ? 3.4 : article.sentiment === "negative" ? -2.8 : 0.6,
     message: article.headline,
     time: article.time,
   }));
 
-  // Use real news or fallback to mock
   const displayAlerts = newsAlerts.length > 0 ? newsAlerts : marketAlerts;
-  const majorMoves = displayAlerts.filter((a) => Math.abs(a.changePercent) >= 5);
-  const displayed = displayAlerts.slice(0, visibleCount);
+  const filteredAlerts =
+    activeFilter === "All"
+      ? displayAlerts
+      : displayAlerts.filter((a) => {
+          if (activeFilter === "Stocks") return a.type === "Price Change";
+          if (activeFilter === "Products") return a.type === "Demand Spike";
+          if (activeFilter === "Companies") return a.type === "Profit Report" || a.type === "Price Change";
+          return a.type === "News Impact";
+        });
+
+  const majorMoves = filteredAlerts.filter((a) => Math.abs(a.changePercent) >= 4);
+  const displayed = filteredAlerts.slice(0, visibleCount);
 
   return (
-    <motion.div className="space-y-8" initial="hidden" animate="show" variants={{ show: { transition: { staggerChildren: 0.06 } } }}>
-      {/* Error Alert */}
+    <motion.div
+      className="space-y-6"
+      initial="hidden"
+      animate="show"
+      variants={{ show: { transition: { staggerChildren: 0.05 } } }}
+    >
       {newsData.error && (
         <motion.div variants={fadeUp}>
-          <Alert variant="default" className="bg-yellow-500/10 border-yellow-500/20">
-            <AlertCircle className="h-4 w-4 text-yellow-600" />
-            <AlertDescription className="text-yellow-700 ml-2">
+          <Alert variant="default" className="bg-[#FFE055]/10 border-[#FFE055]/30 rounded-2xl">
+            <AlertCircle className="h-4 w-4 text-[#FFE055]" />
+            <AlertDescription className="text-foreground/85 ml-2 text-xs">
               {newsData.error}
             </AlertDescription>
           </Alert>
@@ -80,52 +93,62 @@ const Feed = () => {
       )}
 
       {/* Ticker Bar */}
-      <motion.div variants={fadeUp} className="overflow-hidden glass-card py-2 px-4">
+      <motion.div variants={fadeUp} className="overflow-hidden glass-card py-3 px-4">
         <div className="flex gap-8 animate-[scroll_30s_linear_infinite] whitespace-nowrap">
           {[...companies, ...companies].map((c, i) => (
             <span key={`${c.id}-${i}`} className="inline-flex items-center gap-2 text-sm">
-              <span className="font-semibold text-foreground">{c.symbol}</span>
+              <span className="font-bold text-foreground">{c.symbol}</span>
               <span className="text-muted-foreground">${c.currentPrice.toFixed(2)}</span>
-              <span className={c.changePercent >= 0 ? "text-primary" : "text-destructive"}>
-                {c.changePercent >= 0 ? "+" : ""}{c.changePercent.toFixed(2)}%
+              <span className={c.changePercent >= 0 ? "text-[#1BF2B3] font-bold" : "text-[#FF7597] font-bold"}>
+                {c.changePercent >= 0 ? "+" : ""}
+                {c.changePercent.toFixed(2)}%
               </span>
             </span>
           ))}
         </div>
       </motion.div>
 
-      {/* AI Daily Summary */}
-      <motion.div variants={fadeUp} className="rounded-xl p-[1px] bg-gradient-to-r from-primary to-secondary">
-        <div className="glass-card rounded-xl p-6">
-          <div className="flex items-center gap-2 mb-3">
-            <Brain className="h-5 w-5 text-primary" />
-            <h2 className="text-lg font-semibold text-foreground">Today's Market Summary</h2>
-            <button
-              onClick={handleRefreshAi}
-              disabled={aiLoading}
-              className="ml-auto p-1.5 rounded-lg hover:bg-muted/50 transition-colors disabled:opacity-50"
-            >
-              <RefreshCw className={`h-4 w-4 text-muted-foreground ${aiLoading ? 'animate-spin' : ''}`} />
-            </button>
-          </div>
-          <p className="text-sm text-muted-foreground leading-relaxed">
-            {aiLoading
-              ? "Generating real-time market analysis..."
-              : aiSummary || "Markets closed the day on a cautiously optimistic note. Technology sector led gains with AI-driven stocks surging. Tesla faced selling pressure in European markets while Apple held strong. Energy sector remains volatile amid oil price uncertainty. Overall market breadth was positive with 6 out of 10 tracked companies gaining."}
-          </p>
-          <p className="text-xs text-muted-foreground mt-3">
-            Powered by Gemini AI
-          </p>
+      {/* AI Daily Summary Bento */}
+      <motion.div
+        variants={fadeUp}
+        className="rounded-[22px] p-6 text-white shadow-[0_14px_30px_rgba(44,32,120,0.28)]"
+        style={{
+          background: "linear-gradient(145deg, #4B38C9 0%, #2C217A 58%, #191645 100%)",
+        }}
+      >
+        <div className="flex items-center gap-2.5 mb-3">
+          <Brain className="h-5 w-5 text-[#FFE055]" />
+          <h2 className="text-base font-bold">Today&apos;s Market Summary</h2>
+          <button
+            type="button"
+            onClick={loadAiSummary}
+            disabled={aiLoading}
+            className="ml-auto p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors disabled:opacity-50"
+          >
+            <RefreshCw className={`h-4 w-4 ${aiLoading ? "animate-spin" : ""}`} />
+          </button>
         </div>
+        <p className="text-sm text-white/85 leading-relaxed">
+          {aiLoading
+            ? "Generating real-time market analysis..."
+            : aiSummary ||
+              "Markets closed cautiously optimistic. Technology led gains while Energy remained volatile."}
+        </p>
+        <p className="text-xs text-white/60 mt-3">Powered by Gemini AI · Educational Only</p>
       </motion.div>
 
-      {/* Filter Bar */}
+      {/* Pill Filter Bar */}
       <motion.div variants={fadeUp} className="flex gap-2 flex-wrap">
         {filters.map((f) => (
           <button
             key={f}
+            type="button"
             onClick={() => setActiveFilter(f)}
-            className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${activeFilter === f ? "bg-primary text-primary-foreground" : "bg-muted/50 text-muted-foreground hover:text-foreground"}`}
+            className={`px-4 py-2 rounded-full text-xs font-bold transition-all ${
+              activeFilter === f
+                ? "bg-[#FFE055] text-[#141416] shadow-sm"
+                : "bento-tile text-muted-foreground hover:text-foreground"
+            }`}
           >
             {f}
           </button>
@@ -135,20 +158,37 @@ const Feed = () => {
       {/* Major Moves */}
       {majorMoves.length > 0 && (
         <motion.div variants={fadeUp}>
-          <h2 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
-            <Zap className="h-5 w-5 text-yellow-400" /> Major Moves Today
+          <h2 className="text-base font-bold text-foreground mb-3 flex items-center gap-2">
+            <Zap className="h-4 w-4 text-[#FFE055]" /> Major Moves Today
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {majorMoves.map((a) => (
+            {majorMoves.map((a, idx) => (
               <div
                 key={a.id}
-                className={`glass-card p-5 border ${a.changePercent >= 0 ? "border-primary/40 shadow-[0_0_20px_hsl(var(--primary)/0.15)]" : "border-destructive/40 shadow-[0_0_20px_hsl(var(--destructive)/0.15)]"}`}
+                className={`p-5 rounded-[22px] ${
+                  idx === 0
+                    ? "bento-highlight shadow-md"
+                    : "glass-card"
+                }`}
               >
-                <p className={`text-2xl font-bold ${a.changePercent >= 0 ? "text-primary" : "text-destructive"}`}>
-                  {a.changePercent >= 0 ? "+" : ""}{a.changePercent}%
+                <p
+                  className={`text-2xl font-extrabold ${
+                    idx === 0
+                      ? "text-[#141416]"
+                      : a.changePercent >= 0
+                      ? "text-[#1BF2B3]"
+                      : "text-[#FF7597]"
+                  }`}
+                >
+                  {a.changePercent >= 0 ? "+" : ""}
+                  {a.changePercent.toFixed(1)}%
                 </p>
-                <p className="text-sm font-semibold text-foreground mt-1">{a.company}</p>
-                <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{a.message}</p>
+                <p className={`text-sm font-bold mt-1 ${idx === 0 ? "text-[#141416]" : "text-foreground"}`}>
+                  {a.company}
+                </p>
+                <p className={`text-xs mt-1 line-clamp-2 ${idx === 0 ? "text-[#141416]/80" : "text-muted-foreground"}`}>
+                  {a.message}
+                </p>
               </div>
             ))}
           </div>
@@ -157,57 +197,62 @@ const Feed = () => {
 
       {/* Main Feed */}
       <motion.div variants={fadeUp} className="space-y-3">
-        {newsData.loading ? (
-          <>
-            {[...Array(5)].map((_, i) => (
-              <div key={i} className="glass-card p-5 h-20 bg-muted animate-pulse rounded border-l-4 border-l-muted" />
-            ))}
-          </>
-        ) : displayed.map((alert) => {
-          const positive = alert.changePercent >= 0;
-          const borderColor = alert.type === "News Impact" || alert.type === "Profit Report"
-            ? "border-l-secondary"
-            : positive ? "border-l-primary" : "border-l-destructive";
+        {newsData.loading
+          ? [...Array(5)].map((_, i) => (
+              <div key={i} className="glass-card p-5 h-20 animate-pulse" />
+            ))
+          : displayed.map((alert) => {
+              const positive = alert.changePercent >= 0;
+              return (
+                <div
+                  key={alert.id}
+                  className="glass-card p-5 hover:translate-y-[-2px] transition-all duration-200 cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+                  onClick={() => navigate("/company")}
+                >
+                  <div className="space-y-1.5 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-sm font-bold text-foreground">{alert.company}</span>
+                      <Badge variant="outline" className={`text-[10px] px-2 ${typeBadge[alert.type] ?? ""}`}>
+                        {alert.type}
+                      </Badge>
+                      <span className="text-xs text-muted-foreground">· {alert.time}</span>
+                    </div>
+                    <p className="text-sm text-muted-foreground">{alert.message}</p>
+                  </div>
 
-          return (
-            <div
-              key={alert.id}
-              className={`glass-card p-5 border-l-4 ${borderColor} hover:translate-y-[-2px] hover:shadow-lg transition-all duration-200 cursor-pointer`}
-              onClick={() => navigate("/company")}
-            >
-              <div className="flex flex-wrap items-center gap-2 mb-2">
-                <span className="text-sm font-semibold text-foreground">{alert.company}</span>
-                <Badge variant="outline" className={`text-[10px] px-1.5 border ${typeBadge[alert.type] ?? ""}`}>
-                  {alert.type}
-                </Badge>
-              </div>
-              <p className={`text-xl font-bold ${positive ? "text-primary" : "text-destructive"}`}>
-                {positive ? "+" : ""}{alert.changePercent.toFixed(1)}%
-              </p>
-              <p className="text-sm text-muted-foreground mt-1">{alert.message}</p>
-              <div className="flex items-center justify-between mt-3">
-                <span className="text-xs text-muted-foreground">{alert.time}</span>
-                <Button variant="ghost" size="sm" className="text-xs text-primary">
-                  View Details →
-                </Button>
-              </div>
-            </div>
-          );
-        })}
+                  <div className="flex items-center gap-4 shrink-0">
+                    <span
+                      className={`text-lg font-extrabold ${
+                        positive ? "text-[#1BF2B3]" : "text-[#FF7597]"
+                      }`}
+                    >
+                      {positive ? "+" : ""}
+                      {alert.changePercent.toFixed(1)}%
+                    </span>
+                    <span className="flex h-8 w-8 items-center justify-center rounded-full bento-tile text-foreground">
+                      <ChevronRight className="h-4 w-4" />
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
       </motion.div>
 
-      {/* Data Source Credit */}
       <motion.div variants={fadeUp} className="text-center">
         <p className="text-xs text-muted-foreground">
-          Market news powered by <span className="font-semibold">NewsAPI</span> • 
-          Stock data powered by <span className="font-semibold">Alpha Vantage</span>
+          Market news powered by <span className="font-semibold text-foreground">NewsAPI</span> • Stock data powered by{" "}
+          <span className="font-semibold text-foreground">Alpha Vantage</span>
         </p>
       </motion.div>
 
-      {/* Load More */}
-      {visibleCount < displayAlerts.length && (
+      {visibleCount < filteredAlerts.length && (
         <motion.div variants={fadeUp} className="flex justify-center">
-          <Button variant="outline" onClick={() => setVisibleCount((c) => c + 5)}>Load More</Button>
+          <Button
+            onClick={() => setVisibleCount((c) => c + 5)}
+            className="rounded-full bg-[#FFE055] text-[#141416] hover:bg-[#ffd62b] font-bold px-6"
+          >
+            Load More
+          </Button>
         </motion.div>
       )}
     </motion.div>

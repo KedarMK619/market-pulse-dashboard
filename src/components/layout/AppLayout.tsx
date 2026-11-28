@@ -10,8 +10,8 @@ const AppLayout = () => {
     <div className="min-h-screen bg-background">
       <Sidebar />
       <Header />
-      <main className="lg:ml-60 pt-16 pb-56 lg:pb-48 px-4 md:px-6">
-        <div className="py-6">
+      <main className="lg:ml-60 pt-16 pb-36 lg:pb-24 px-4 md:px-6">
+        <div className="py-6 max-w-[1440px] mx-auto">
           <Outlet />
         </div>
       </main>

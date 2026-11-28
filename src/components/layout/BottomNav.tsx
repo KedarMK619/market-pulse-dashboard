@@ -1,11 +1,11 @@
 import { Link, useLocation } from "react-router-dom";
-import { LayoutDashboard, Building2, Activity, Brain, Bookmark } from "lucide-react";
+import { LayoutGrid, Building2, ShoppingBag, Brain, Bookmark } from "lucide-react";
 
 const tabs = [
-  { label: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
+  { label: "Dashboard", icon: LayoutGrid, path: "/dashboard" },
   { label: "Company", icon: Building2, path: "/company" },
-  { label: "Feed", icon: Activity, path: "/feed" },
-  { label: "AI", icon: Brain, path: "/ai-insights" },
+  { label: "Products", icon: ShoppingBag, path: "/products" },
+  { label: "PulseAI", icon: Brain, path: "/ai-insights" },
   { label: "Watchlist", icon: Bookmark, path: "/watchlist" },
 ];
 
@@ -22,12 +22,14 @@ const BottomNav = () => {
           <Link
             key={tab.path}
             to={tab.path}
-            className={`flex flex-col items-center gap-0.5 py-1 px-2 rounded-lg transition-colors ${
-              isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"
+            className={`flex flex-col items-center gap-0.5 py-1.5 px-3 rounded-2xl transition-all ${
+              isActive
+                ? "bg-[#FFE055] text-[#141416] font-bold shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
             }`}
           >
-            <tab.icon className="h-5 w-5" />
-            <span className="text-[10px] font-medium">{tab.label}</span>
+            <tab.icon className="h-4 w-4" />
+            <span className="text-[10px]">{tab.label}</span>
           </Link>
         );
       })}

@@ -1,12 +1,30 @@
 import { useState, useMemo } from "react";
 import { motion } from "framer-motion";
-import { Search, TrendingUp, Newspaper, Tag, CalendarDays, ArrowUpRight, ArrowDownRight, Minus } from "lucide-react";
+import {
+  Search,
+  TrendingUp,
+  Newspaper,
+  Tag,
+  CalendarDays,
+  ArrowUpRight,
+  ArrowDownRight,
+  Minus,
+  Flame,
+  BarChart3,
+  TrendingDown,
+} from "lucide-react";
 import { products } from "@/lib/mock/mockData";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { FolderCard } from "@/components/ui/FolderCard";
 import {
-  AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
 } from "recharts";
 
 const categories = [
@@ -27,14 +45,12 @@ const factors = [
 ];
 
 const impactColor: Record<string, string> = {
-  High: "bg-destructive/20 text-destructive border-destructive/30",
-  Medium: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
+  High: "bg-[#FF7597]/20 text-[#FF7597] border-[#FF7597]/30",
+  Medium: "bg-[#FFE055]/20 text-[#FFE055] border-[#FFE055]/30",
   Low: "bg-muted text-muted-foreground border-border",
 };
 
-const rankColors = ["text-yellow-400 border-yellow-400", "text-gray-300 border-gray-300", "text-amber-600 border-amber-600"];
-
-const fadeUp = { hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0 } };
+const fadeUp = { hidden: { opacity: 0, y: 16 }, show: { opacity: 1, y: 0 } };
 
 const Products = () => {
   const [selectedCat, setSelectedCat] = useState("Electronics");
@@ -45,44 +61,141 @@ const Products = () => {
     let list = cat?.match.length ? products.filter((p) => cat.match.includes(p.category)) : [];
     if (search) {
       const q = search.toLowerCase();
-      list = products.filter((p) => p.name.toLowerCase().includes(q) || p.brand.toLowerCase().includes(q));
+      list = products.filter(
+        (p) => p.name.toLowerCase().includes(q) || p.brand.toLowerCase().includes(q)
+      );
     }
     return list.sort((a, b) => b.demandScore - a.demandScore);
   }, [selectedCat, search]);
 
+  const topSurging = useMemo(
+    () => [...products].sort((a, b) => b.demandChange - a.demandChange)[0],
+    []
+  );
+  const topCooling = useMemo(
+    () => [...products].sort((a, b) => a.demandChange - b.demandChange)[0],
+    []
+  );
+  const avgCategoryScore = useMemo(() => {
+    if (!filtered.length) return 0;
+    return Math.round(filtered.reduce((s, p) => s + p.demandScore, 0) / filtered.length);
+  }, [filtered]);
+
   const top5 = filtered.slice(0, 5);
-  // aggregate monthly demand from top product or fallback
   const chartProduct = filtered[0];
   const chartData = chartProduct?.monthlyDemand ?? [];
 
   return (
-    <motion.div className="space-y-8" initial="hidden" animate="show" variants={{ show: { transition: { staggerChildren: 0.08 } } }}>
-      {/* Header */}
-      <motion.div variants={fadeUp}>
-        <h1 className="text-2xl font-bold text-foreground">Product Demand Tracker</h1>
-        <p className="text-sm text-muted-foreground mt-1">Track real-time demand shifts across product categories</p>
-        <div className="relative mt-4 max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Search any product..." className="pl-10" value={search} onChange={(e) => setSearch(e.target.value)} />
+    <motion.div
+      className="space-y-6"
+      initial="hidden"
+      animate="show"
+      variants={{ show: { transition: { staggerChildren: 0.06 } } }}
+    >
+      {/* Header + Search */}
+      <motion.div variants={fadeUp} className="glass-card p-6 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-2xl font-extrabold text-foreground">Product Demand Tracker</h2>
+          <p className="text-xs text-muted-foreground mt-1">
+            Track real-time demand shifts, regional popularity &amp; product drivers
+          </p>
+        </div>
+        <div className="relative w-full lg:max-w-sm">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search any product or brand..."
+            className="pl-11 h-11 rounded-full bg-[hsla(var(--input))] border-border"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
         </div>
       </motion.div>
 
-      {/* Category Grid */}
+      {/* Top 3 Folder Cards */}
+      <motion.div variants={fadeUp} className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <FolderCard
+          tone="mint"
+          label="Surging Product"
+          value={`${topSurging.demandScore}/100`}
+          trend={`+${topSurging.demandChange} MoM`}
+          metaLabel="Product"
+          metaValue={topSurging.name}
+          ctaLabel="Focus"
+          onCtaClick={() => {
+            setSearch("");
+            setSelectedCat("Electronics");
+          }}
+          icon={<Flame className="h-3 w-3" />}
+        />
+        <FolderCard
+          tone="yellow"
+          label={`${selectedCat} Avg`}
+          value={`${avgCategoryScore}/100`}
+          trend={`${filtered.length} Products`}
+          metaLabel="Leader"
+          metaValue={chartProduct?.name ?? "None"}
+          ctaLabel="Reset"
+          onCtaClick={() => setSearch("")}
+          icon={<BarChart3 className="h-3 w-3" />}
+        />
+        <FolderCard
+          tone="pink"
+          label="Cooling Demand"
+          value={`${topCooling.demandScore}/100`}
+          trend={`${topCooling.demandChange} MoM`}
+          metaLabel="Product"
+          metaValue={topCooling.name}
+          ctaLabel="Inspect"
+          onCtaClick={() => {
+            setSearch("");
+            setSelectedCat("Automobiles");
+          }}
+          icon={<TrendingDown className="h-3 w-3" />}
+        />
+      </motion.div>
+
+      {/* Category Tile Grid */}
       <motion.div variants={fadeUp} className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-3">
         {categories.map((cat) => {
-          const count = cat.match.length ? products.filter((p) => cat.match.includes(p.category)).length : 0;
-          const avg = count ? Math.round(products.filter((p) => cat.match.includes(p.category)).reduce((s, p) => s + p.demandScore, 0) / count) : 0;
-          const active = selectedCat === cat.name;
+          const count = cat.match.length
+            ? products.filter((p) => cat.match.includes(p.category)).length
+            : 0;
+          const avg = count
+            ? Math.round(
+                products
+                  .filter((p) => cat.match.includes(p.category))
+                  .reduce((s, p) => s + p.demandScore, 0) / count
+              )
+            : 0;
+          const active = !search && selectedCat === cat.name;
           return (
             <button
               key={cat.name}
-              onClick={() => { setSearch(""); setSelectedCat(cat.name); }}
-              className={`glass-card p-4 text-left transition-all duration-200 hover:scale-[1.03] ${active ? "border-primary shadow-[0_0_16px_hsl(var(--primary)/0.25)]" : ""}`}
+              type="button"
+              onClick={() => {
+                setSearch("");
+                setSelectedCat(cat.name);
+              }}
+              className={`p-4 text-left transition-all duration-200 hover:scale-[1.03] ${
+                active ? "bento-highlight shadow-md" : "glass-card"
+              }`}
             >
               <span className="text-2xl">{cat.emoji}</span>
-              <p className="text-sm font-semibold text-foreground mt-2">{cat.name}</p>
-              <p className="text-xs text-muted-foreground">{count} products</p>
-              {count > 0 && <Badge variant="secondary" className="mt-2 text-xs">{avg} avg</Badge>}
+              <p className={`text-sm font-bold mt-2 ${active ? "text-[#141416]" : "text-foreground"}`}>
+                {cat.name}
+              </p>
+              <p className={`text-xs ${active ? "text-[#141416]/75" : "text-muted-foreground"}`}>
+                {count} products
+              </p>
+              {count > 0 && (
+                <Badge
+                  className={`mt-2 text-[11px] ${
+                    active ? "bg-[#141416] text-[#FFE055]" : "bg-muted text-foreground"
+                  }`}
+                >
+                  {avg} avg
+                </Badge>
+              )}
             </button>
           );
         })}
@@ -94,72 +207,131 @@ const Products = () => {
         </motion.div>
       ) : (
         <>
-          {/* Demand Index Chart */}
-          <motion.div variants={fadeUp} className="glass-card p-6">
-            <h2 className="text-lg font-semibold text-foreground mb-4">Demand Index — {chartProduct?.name}</h2>
-            <ResponsiveContainer width="100%" height={250}>
-              <AreaChart data={chartData}>
-                <defs>
-                  <linearGradient id="demandGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.4} />
-                    <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <XAxis dataKey="month" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} axisLine={false} tickLine={false} />
-                <YAxis domain={[0, 100]} tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} axisLine={false} tickLine={false} />
-                <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, color: "hsl(var(--foreground))" }} />
-                <Area type="monotone" dataKey="score" stroke="hsl(var(--primary))" fill="url(#demandGrad)" strokeWidth={2} />
-              </AreaChart>
-            </ResponsiveContainer>
-          </motion.div>
+          {/* Demand Chart + Top 5 Ranking Bento Row */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+            <motion.div variants={fadeUp} className="lg:col-span-7 glass-card p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-base font-bold text-foreground">
+                  Demand Index — {chartProduct?.name}
+                </h2>
+                <Badge className="bg-[#1BF2B3]/15 text-[#1BF2B3] border-[#1BF2B3]/30">
+                  {chartProduct?.demandScore}/100
+                </Badge>
+              </div>
+              <ResponsiveContainer width="100%" height={260}>
+                <AreaChart data={chartData}>
+                  <defs>
+                    <linearGradient id="demandGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#1BF2B3" stopOpacity={0.35} />
+                      <stop offset="100%" stopColor="#1BF2B3" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <XAxis dataKey="month" tick={{ fill: "#9ca3af", fontSize: 12 }} axisLine={false} tickLine={false} />
+                  <YAxis domain={[0, 100]} tick={{ fill: "#9ca3af", fontSize: 12 }} axisLine={false} tickLine={false} />
+                  <Tooltip
+                    contentStyle={{
+                      background: "#1C1C20",
+                      border: "1px solid rgba(255,255,255,0.1)",
+                      borderRadius: 12,
+                      color: "#fff",
+                    }}
+                  />
+                  <Area type="monotone" dataKey="score" stroke="#1BF2B3" fill="url(#demandGrad)" strokeWidth={2.5} />
+                </AreaChart>
+              </ResponsiveContainer>
+            </motion.div>
 
-          {/* Top 5 Products Ranking */}
-          <motion.div variants={fadeUp} className="glass-card p-6">
-            <h2 className="text-lg font-semibold text-foreground mb-4">Top Products by Demand</h2>
-            <div className="space-y-3">
-              {top5.map((p, i) => (
-                <div key={p.id} className="flex items-center gap-4 p-3 rounded-lg bg-background/30 hover:bg-background/50 transition-colors">
-                  <span className={`flex items-center justify-center h-8 w-8 rounded-full border-2 text-sm font-bold ${i < 3 ? rankColors[i] : "text-muted-foreground border-muted"}`}>{i + 1}</span>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-foreground truncate">{p.name}</p>
-                    <p className="text-xs text-muted-foreground">{p.brand}</p>
-                  </div>
-                  <div className="w-24 hidden sm:block">
-                    <Progress value={p.demandScore} className="h-2" />
-                  </div>
-                  <span className="text-sm font-bold text-foreground w-10 text-right">{p.demandScore}</span>
-                  <Badge className={`text-xs ${p.demandChange >= 0 ? "bg-primary/20 text-primary" : "bg-destructive/20 text-destructive"}`}>
-                    {p.demandChange >= 0 ? "+" : ""}{p.demandChange}
-                  </Badge>
-                </div>
-              ))}
-            </div>
-          </motion.div>
+            <motion.div variants={fadeUp} className="lg:col-span-5 glass-card p-6">
+              <h2 className="text-base font-bold text-foreground mb-4">Top Products by Demand</h2>
+              <div className="space-y-2.5">
+                {top5.map((p, i) => {
+                  const first = i === 0;
+                  return (
+                    <div
+                      key={p.id}
+                      className={`flex items-center gap-3 p-3 ${
+                        first ? "bento-highlight shadow-sm" : "bento-tile"
+                      }`}
+                    >
+                      <span
+                        className={`flex items-center justify-center h-8 w-8 rounded-xl text-xs font-extrabold shrink-0 ${
+                          first
+                            ? "bg-[#141416] text-[#FFE055]"
+                            : "bg-background/60 text-foreground"
+                        }`}
+                      >
+                        #{i + 1}
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <p className={`text-sm font-bold truncate ${first ? "text-[#141416]" : "text-foreground"}`}>
+                          {p.name}
+                        </p>
+                        <p className={`text-xs ${first ? "text-[#141416]/75" : "text-muted-foreground"}`}>
+                          {p.brand}
+                        </p>
+                      </div>
+                      <div className="w-20 hidden sm:block">
+                        <Progress value={p.demandScore} className="h-2" />
+                      </div>
+                      <span className={`text-sm font-extrabold w-8 text-right ${first ? "text-[#141416]" : "text-foreground"}`}>
+                        {p.demandScore}
+                      </span>
+                      <Badge
+                        className={`text-[11px] ${
+                          first
+                            ? "bg-[#141416] text-[#FFE055]"
+                            : p.demandChange >= 0
+                            ? "bg-[#1BF2B3]/20 text-[#1BF2B3]"
+                            : "bg-[#FF7597]/20 text-[#FF7597]"
+                        }`}
+                      >
+                        {p.demandChange >= 0 ? "+" : ""}
+                        {p.demandChange}
+                      </Badge>
+                    </div>
+                  );
+                })}
+              </div>
+            </motion.div>
+          </div>
 
           {/* Demand Change Table */}
-          <motion.div variants={fadeUp} className="glass-card p-6 overflow-x-auto">
-            <h2 className="text-lg font-semibold text-foreground mb-4">Demand Changes</h2>
+          <motion.div variants={fadeUp} className="glass-card overflow-x-auto">
+            <div className="p-6 pb-3">
+              <h2 className="text-base font-bold text-foreground">Demand Changes</h2>
+            </div>
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-border text-muted-foreground">
-                  <th className="text-left py-3 px-2 font-medium">Product</th>
-                  <th className="text-right py-3 px-2 font-medium">Current</th>
-                  <th className="text-right py-3 px-2 font-medium">Last Month</th>
-                  <th className="text-right py-3 px-2 font-medium">Change</th>
-                  <th className="text-center py-3 px-2 font-medium">Trend</th>
+                <tr className="border-b border-border bg-muted/30 text-muted-foreground">
+                  <th className="text-left py-3 px-6 font-semibold">Product</th>
+                  <th className="text-right py-3 px-4 font-semibold">Current</th>
+                  <th className="text-right py-3 px-4 font-semibold">Last Month</th>
+                  <th className="text-right py-3 px-4 font-semibold">Change</th>
+                  <th className="text-center py-3 px-6 font-semibold">Trend</th>
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((p, i) => (
-                  <tr key={p.id} className={`border-b border-border/50 ${i % 2 === 0 ? "bg-background/20" : ""}`}>
-                    <td className="py-3 px-2 font-medium text-foreground">{p.name}</td>
-                    <td className="py-3 px-2 text-right text-foreground">{p.demandScore}</td>
-                    <td className="py-3 px-2 text-right text-muted-foreground">{p.lastMonthScore}</td>
-                    <td className={`py-3 px-2 text-right font-semibold ${p.demandChange >= 0 ? "text-primary" : "text-destructive"}`}>
-                      {p.demandChange >= 0 ? "+" : ""}{p.demandChange}
+                {filtered.map((p) => (
+                  <tr key={p.id} className="border-t border-border hover:bg-muted/30 transition-colors">
+                    <td className="py-3.5 px-6 font-semibold text-foreground">{p.name}</td>
+                    <td className="py-3.5 px-4 text-right font-bold text-foreground">{p.demandScore}</td>
+                    <td className="py-3.5 px-4 text-right text-muted-foreground">{p.lastMonthScore}</td>
+                    <td
+                      className={`py-3.5 px-4 text-right font-bold ${
+                        p.demandChange >= 0 ? "text-[#1BF2B3]" : "text-[#FF7597]"
+                      }`}
+                    >
+                      {p.demandChange >= 0 ? "+" : ""}
+                      {p.demandChange}
                     </td>
-                    <td className="py-3 px-2 text-center">
-                      {p.trend === "up" ? <ArrowUpRight className="inline h-4 w-4 text-primary" /> : p.trend === "down" ? <ArrowDownRight className="inline h-4 w-4 text-destructive" /> : <Minus className="inline h-4 w-4 text-yellow-400" />}
+                    <td className="py-3.5 px-6 text-center">
+                      {p.trend === "up" ? (
+                        <ArrowUpRight className="inline h-4 w-4 text-[#1BF2B3]" />
+                      ) : p.trend === "down" ? (
+                        <ArrowDownRight className="inline h-4 w-4 text-[#FF7597]" />
+                      ) : (
+                        <Minus className="inline h-4 w-4 text-[#FFE055]" />
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -168,18 +340,20 @@ const Products = () => {
           </motion.div>
 
           {/* Key Demand Factors */}
-          <motion.div variants={fadeUp}>
-            <h2 className="text-lg font-semibold text-foreground mb-4">Key Demand Factors</h2>
+          <motion.div variants={fadeUp} className="glass-card p-6">
+            <h2 className="text-base font-bold text-foreground mb-4">Key Demand Factors</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {factors.map((f) => (
-                <div key={f.name} className="glass-card p-5 flex gap-4">
-                  <div className="p-2 rounded-lg bg-primary/10 h-fit">
-                    <f.icon className="h-5 w-5 text-primary" />
+                <div key={f.name} className="bento-tile p-4 flex gap-4">
+                  <div className="p-2.5 rounded-xl bg-[#FFE055]/15 h-fit">
+                    <f.icon className="h-5 w-5 text-[#FFE055]" />
                   </div>
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
-                      <p className="text-sm font-semibold text-foreground">{f.name}</p>
-                      <Badge variant="outline" className={`text-[10px] px-1.5 ${impactColor[f.impact]}`}>{f.impact}</Badge>
+                      <p className="text-sm font-bold text-foreground">{f.name}</p>
+                      <Badge variant="outline" className={`text-[10px] px-2 ${impactColor[f.impact]}`}>
+                        {f.impact}
+                      </Badge>
                     </div>
                     <p className="text-xs text-muted-foreground">{f.desc}</p>
                   </div>
